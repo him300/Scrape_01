@@ -1,0 +1,70 @@
+{
+  "name": "math2",
+  "description": "Mathematics, physics, and category theory topics mentioned in Math3ma blog articles.",
+  "columns": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "publication_date",
+      "type": "date",
+      "required": false
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "summary",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "article_url",
+      "type": "url",
+      "required": false
+    }
+  ],
+  "key": [
+    "article_url"
+  ],
+  "sortBy": "publication_date:asc",
+  "sources": [
+    {
+      "id": "main",
+      "url": "https://www.math3ma.com/",
+      "extract": {
+        "kind": "selector",
+        "row": ".div-block-for-blog-items",
+        "fields": {
+          "title": "h1.heading-3",
+          "publication_date": ".meta-data-font",
+          "category": ".text-block-12",
+          "summary": ".w-richtext",
+          "article_url": "a.read-more-link@href"
+        }
+      },
+      "paginate": {
+        "mode": "next",
+        "selector": "a:contains(\"Next\")"
+      }
+    }
+  ],
+  "csv": {
+    "delimiter": ",",
+    "newline": "\r\n",
+    "bom": false
+  },
+  "limits": {
+    "maxPages": 200,
+    "maxRows": 200000,
+    "maxDepth": 1
+  },
+  "timeKinds": {
+    "publication_date": "parsed"
+  },
+  "profile": "monster"
+}

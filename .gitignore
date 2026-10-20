@@ -1,0 +1,4 @@
+data/
+.scrape01/
+node_modules/
+*.tmp

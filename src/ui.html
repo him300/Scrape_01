@@ -1,0 +1,1014 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scrape_01 — datasets</title>
+<style>
+/* ============================================================ TOKENS
+   One source of truth. The grid overlay and the content read the SAME
+   variables, so the guides can never drift from the layout.            */
+:root{
+  /* grid */
+  --cols:12; --gutter:24px; --margin:32px; --bl:8px; --lh:24px; --maxw:1560px;
+  --rail:264px;
+
+  /* paper + ink */
+  --paper:#fbfbfa; --paper-2:#f2f2ef; --paper-3:#e9e9e4;
+  --ink:#14161a; --ink-2:#3d4149; --ink-3:#767b85; --ink-4:#a6aab2;
+  --rule:#dcdcd6; --rule-soft:#e9e9e4;
+  --accent:#d6002a; --accent-ink:#ffffff; --accent-soft:#fdecef;
+  --ok:#0f7a4a; --ok-soft:#e8f5ee; --warn:#9a6400; --warn-soft:#fdf3e0; --bad:#c0202f;
+
+  --sans:"Inter","Helvetica Neue",Helvetica,"Segoe UI",Arial,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Consolas,monospace;
+
+  --r:3px;
+  --shadow-1:0 1px 2px rgba(20,22,26,.05);
+  --shadow-2:0 18px 48px -20px rgba(20,22,26,.35), 0 2px 8px rgba(20,22,26,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#111317; --paper-2:#171a1f; --paper-3:#1e2228;
+    --ink:#f2f2ef; --ink-2:#c3c6cc; --ink-3:#8b9099; --ink-4:#63686f;
+    --rule:#2a2e35; --rule-soft:#21252b;
+    --accent:#ff3b5c; --accent-ink:#12060a; --accent-soft:#33111a;
+    --ok:#3fbf7f; --ok-soft:#132a1f; --warn:#e0a13a; --warn-soft:#2b2113; --bad:#ef5f6b;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4);
+    --shadow-2:0 24px 60px -24px rgba(0,0,0,.75), 0 2px 10px rgba(0,0,0,.4);
+  }
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:14px/var(--lh) var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accent);color:var(--accent-ink)}
+
+/* ============================================================ SHELL */
+.app{
+  display:grid;grid-template-columns:var(--rail) 1fr;grid-template-rows:auto 1fr;
+  height:100vh;max-width:var(--maxw);margin:0 auto;
+  border-left:1px solid var(--rule);border-right:1px solid var(--rule);
+}
+.app>*{min-width:0}
+
+/* masthead */
+.masthead{
+  grid-column:1/-1;display:flex;align-items:center;gap:16px;min-width:0;overflow:hidden;
+  padding:calc(var(--bl)*2) var(--margin);min-height:64px;
+  border-bottom:1px solid var(--ink);
+  background:var(--paper);position:sticky;top:0;z-index:20;
+}
+.wordmark{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.wordmark i{font-style:normal;color:var(--accent)}
+.wordmark em{font-style:normal;color:var(--ink-3);font-weight:400}
+.kicker{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ws{font-family:var(--mono);font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:38vw;min-width:0}
+.spacer{flex:1}
+
+/* the profile switch — the monster toggle */
+.switch{display:flex;align-items:center;gap:8px}
+.switch .kicker{color:var(--ink-3)}
+.seg{display:flex;border:1px solid var(--ink);border-radius:var(--r);overflow:hidden;background:var(--paper)}
+.seg button{
+  appearance:none;border:0;background:transparent;cursor:pointer;white-space:nowrap;
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 11px;color:var(--ink-2);transition:background .14s ease,color .14s ease;
+}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button:hover{background:var(--paper-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button[data-v="monster"][aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg .glyph{font-family:var(--sans);margin-right:5px}
+
+.conn{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.conn .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-4)}
+.conn.live .dot{background:var(--ok)}
+.conn.busy .dot{background:var(--warn);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+/* ============================================================ RAIL */
+.rail{border-right:1px solid var(--rule);background:var(--paper-2);display:flex;flex-direction:column;min-height:0}
+.rail-head{padding:calc(var(--bl)*2) var(--margin) var(--bl);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--rule-soft)}
+.rail-head .kicker{flex:1}
+.dlist{overflow:auto;padding:var(--bl) 0;flex:1;min-height:0}
+.ditem{
+  width:100%;text-align:left;background:none;border:0;border-left:2px solid transparent;
+  padding:10px var(--margin);cursor:pointer;display:grid;gap:2px;transition:background .12s ease;
+}
+.ditem:hover{background:var(--paper-3)}
+.ditem.sel{background:var(--paper);border-left-color:var(--accent)}
+.ditem .nm{font-family:var(--mono);font-size:12.5px;letter-spacing:.01em;display:flex;align-items:center;gap:7px}
+.ditem .nm b{font-weight:600}
+.ditem .meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:flex;gap:9px;align-items:baseline}
+.ditem .meta .n{color:var(--ink);font-size:13px;font-variant-numeric:tabular-nums}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:1px 5px;border:1px solid var(--rule);border-radius:2px;color:var(--ink-3)}
+.tag.ok{color:var(--ok);border-color:currentColor}
+.tag.bad{color:var(--bad);border-color:currentColor}
+.tag.drift{color:var(--bad);border-color:currentColor;background:var(--accent-soft)}
+.rail-foot{border-top:1px solid var(--rule-soft);padding:var(--bl) var(--margin);font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:flex;justify-content:space-between;gap:8px}
+
+/* ============================================================ MAIN */
+main{overflow:auto;min-height:0;position:relative}
+.sheet{padding:calc(var(--bl)*4) var(--margin) 120px;max-width:var(--maxw)}
+
+/* the display line — optically aligned to the column at runtime */
+.display{
+  font-size:clamp(30px,4.2vw,54px);line-height:56px;font-weight:600;letter-spacing:-.025em;
+  margin:0;font-family:var(--sans);
+}
+.display .thin{font-weight:300;color:var(--ink-3)}
+.lede{margin:8px 0 0;color:var(--ink-2);max-width:62ch;font-size:14px;line-height:24px}
+
+/* metric band: Swiss numerals */
+.band{
+  display:grid;grid-template-columns:repeat(var(--cols),1fr);column-gap:var(--gutter);
+  align-items:start;
+}
+@supports not (grid-template-columns:subgrid){ .band{grid-template-columns:repeat(var(--cols),1fr)} }
+.metrics{margin:calc(var(--bl)*4) 0 0;padding-top:var(--lh);border-top:1px solid var(--rule)}
+.metric{grid-column:span 2}
+.metric .kicker{display:block;margin-bottom:4px}
+.metric .v{font-size:30px;line-height:40px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.metric .v small{font-size:13px;color:var(--ink-3);font-weight:400;margin-left:3px;letter-spacing:0}
+.metric .s{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* action bar */
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:calc(var(--bl)*4) 0 0}
+.btn{
+  appearance:none;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  padding:7px 13px;border:1px solid var(--ink);border-radius:var(--r);background:transparent;color:var(--ink);
+  font-size:12.5px;line-height:20px;transition:background .13s ease,color .13s ease,border-color .13s ease;
+}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:disabled:hover{background:transparent;color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.accent{border-color:var(--accent);color:var(--accent)}
+.btn.accent:hover{background:var(--accent);color:var(--accent-ink)}
+.btn.quiet{border-color:var(--rule);color:var(--ink-2)}
+.btn.quiet:hover{background:var(--paper-3);color:var(--ink);border-color:var(--ink-4)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.danger:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
+.btn .kbd{font-family:var(--mono);font-size:10px;color:var(--ink-4);border:1px solid var(--rule);border-radius:2px;padding:0 3px}
+.btn:hover .kbd{color:inherit;border-color:currentColor}
+
+/* tabs as a ruled line */
+.tabs{display:flex;gap:0;margin:calc(var(--bl)*4) 0 0;border-bottom:1px solid var(--rule);align-items:flex-end}
+.tab{
+  cursor:pointer;padding:8px 0;margin-right:26px;font-size:13px;color:var(--ink-3);
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .13s ease;
+}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+.tab .n{font-family:var(--mono);font-size:10.5px;color:var(--ink-4);margin-left:6px}
+
+/* toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;margin:var(--lh) 0;flex-wrap:wrap}
+input[type=search],input[type=text],input[type=url],input[type=number],select{
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:6px 9px;line-height:20px;
+}
+input:focus,select:focus{outline:none;border-color:var(--ink)}
+input[type=search]{width:260px}
+.muted{color:var(--ink-3);font-size:12px}
+.mono{font-family:var(--mono)}
+
+/* table — a grid, not a <table>: the table layout engine mis-sizes rows here */
+.tablewrap{border:1px solid var(--rule);border-radius:var(--r);overflow:auto;max-width:100%;max-height:calc(100vh - 430px);background:var(--paper)}
+.dtable{display:grid;min-width:100%;font-family:var(--mono);font-size:12px;align-items:start}
+.dcell{
+  /* a fixed row height is deliberate: an empty grid cell with vertical padding
+     makes Chrome's intrinsic row sizing ratchet upward on every layout pass */
+  height:37px;line-height:36px;padding:0 12px;border-bottom:1px solid var(--rule-soft);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:460px;cursor:copy;
+}
+.dcell.head{
+  position:sticky;top:0;z-index:2;background:var(--paper-2);border-bottom:1px solid var(--ink);
+  font-weight:600;font-size:11px;letter-spacing:.04em;color:var(--ink-2);cursor:pointer;user-select:none;
+}
+.dcell.head:hover{color:var(--ink)}
+.dcell.head .arrow{color:var(--accent);margin-left:5px}
+.dcell.num{text-align:right;font-variant-numeric:tabular-nums}
+.dcell.blank{color:var(--ink-4)}
+.dcell.flash{background:var(--accent-soft);color:var(--accent)}
+.pager{display:flex;align-items:center;gap:12px;margin-top:calc(var(--bl)*2);flex-wrap:wrap}
+.pager .range{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+
+/* empty state — an editorial statement, not a box */
+.empty{padding:calc(var(--bl)*8) 0;border-top:1px solid var(--rule)}
+.empty h3{margin:0 0 6px;font-size:20px;font-weight:500;letter-spacing:-.01em}
+.empty p{margin:0 0 14px;color:var(--ink-2);max-width:56ch}
+.empty code{font-family:var(--mono);font-size:12px;background:var(--paper-2);border:1px solid var(--rule);border-radius:2px;padding:1px 5px}
+
+/* ruled lists (sources, jobs) */
+.ruled{border-top:1px solid var(--rule)}
+.rule-row{display:grid;grid-template-columns:180px 1fr auto;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--rule-soft)}
+.rule-row .id{font-family:var(--mono);font-size:12.5px}
+.rule-row .u{font-family:var(--mono);font-size:11px;color:var(--ink-3);word-break:break-all}
+.rule-row .r{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.rule-row .err{font-family:var(--mono);font-size:11px;color:var(--bad);grid-column:1/-1}
+.joblist .rule-row{cursor:pointer}
+.joblist .rule-row:hover{background:var(--paper-2)}
+.status{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.status.ok{color:var(--ok)} .status.failed{color:var(--bad)} .status.running{color:var(--warn)}
+.status.queued{color:var(--ink-3)} .status.cancelled{color:var(--ink-3)} .status.locked{color:var(--warn)}
+
+/* ============================================================ DRAWER */
+.drawer{
+  position:fixed;left:0;right:0;bottom:0;background:#0d0f12;color:#d7dae0;
+  border-top:1px solid #000;display:flex;flex-direction:column;height:40px;
+  transition:height .18s cubic-bezier(.4,0,.2,1);z-index:30;
+  font-family:var(--mono);font-size:11.5px;line-height:20px;
+}
+.drawer.open{height:42vh;box-shadow:0 -20px 50px -20px rgba(0,0,0,.5)}
+.drawer-bar{display:flex;align-items:center;gap:12px;padding:0 var(--margin);height:40px;cursor:pointer;border-bottom:1px solid transparent}
+.drawer.open .drawer-bar{border-bottom-color:#22262c}
+.drawer-bar .title{letter-spacing:.08em;text-transform:uppercase;font-size:10.5px;color:#9aa0aa}
+.drawer-bar .hint{font-size:10.5px;color:#5d646e}
+.drawer-bar .btn{border-color:#2b3038;color:#9aa0aa;font-size:11px;padding:3px 9px}
+.drawer-bar .btn:hover{background:#1b1f25;color:#e7e9ec}
+.drawer-body{flex:1;overflow:auto;padding:10px var(--margin);display:none}
+.drawer.open .drawer-body{display:block}
+.ln{white-space:pre-wrap;word-break:break-word;color:#aeb4bd}
+.ln .t{color:#4d535c;margin-right:10px}
+.ln.warn{color:#e0b169} .ln.error{color:#ff8f97} .ln.info{color:#c6d3e6} .ln.debug{color:#5a6069}
+
+/* ============================================================ MODAL */
+.modal{position:fixed;inset:0;background:rgba(15,17,20,.55);backdrop-filter:blur(3px);display:none;place-items:center;z-index:50;padding:24px}
+.modal.on{display:grid}
+.sheetbox{
+  background:var(--paper);border:1px solid var(--ink);border-radius:var(--r);
+  width:min(640px,100%);max-height:88vh;overflow:auto;padding:calc(var(--bl)*3);box-shadow:var(--shadow-2);
+}
+.sheetbox h2{margin:0 0 6px;font-size:19px;font-weight:600;letter-spacing:-.015em}
+.sheetbox p.hint{margin:0 0 20px;color:var(--ink-2);font-size:12.5px;line-height:20px;max-width:58ch}
+.field{display:grid;gap:5px;margin-bottom:14px}
+.field label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.field input,.field textarea,.field select{width:100%}
+.field .sub{font-size:11px;color:var(--ink-3)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sheetbox .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
+
+/* switch row (monster toggle inside sheets) */
+.switchrow{display:flex;gap:14px;align-items:flex-start;padding:12px;border:1px solid var(--rule);border-radius:var(--r);background:var(--paper-2)}
+.switchrow.on{border-color:var(--accent);background:var(--accent-soft)}
+.switchrow .body{flex:1}
+.switchrow .body strong{display:block;font-size:13px;font-weight:600}
+.switchrow .body span{font-size:11.5px;color:var(--ink-2);line-height:18px;display:block;margin-top:2px}
+.checkline{display:flex;gap:9px;align-items:center;font-size:13px;cursor:pointer;padding:7px 0}
+.checkline input{accent-color:var(--accent);width:15px;height:15px}
+
+/* toast */
+.toast{position:fixed;right:20px;bottom:60px;display:grid;gap:8px;z-index:60;max-width:min(460px,86vw)}
+.toast .t{
+  border:1px solid var(--ink);border-left:3px solid var(--accent);background:var(--paper);
+  border-radius:var(--r);padding:9px 13px;font-size:12.5px;box-shadow:var(--shadow-2);
+  animation:pop .22s cubic-bezier(.2,.8,.3,1);
+}
+.toast .t.bad{border-left-color:var(--bad)}
+.toast .t.good{border-left-color:var(--ok)}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}}
+
+/* ============================================================ GRID OVERLAY
+   Lives INSIDE the same content box as the content, so the guides are the
+   content columns at every width. Press G.                                     */
+.guides{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .16s ease;z-index:5}
+body.grid-on .guides{opacity:1}
+.guides .cols{position:absolute;inset:0;padding:0 var(--margin);display:grid;grid-template-columns:repeat(var(--cols),1fr);column-gap:var(--gutter)}
+.guides .cols i{background:rgba(214,0,42,.055);border-left:1px solid rgba(214,0,42,.16);border-right:1px solid rgba(214,0,42,.16)}
+.guides .margins{position:absolute;top:0;bottom:0;left:var(--margin);right:var(--margin);border-left:1px solid rgba(214,0,42,.34);border-right:1px solid rgba(214,0,42,.34)}
+.gridhint{position:fixed;right:16px;top:70px;z-index:40;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);opacity:0;transition:opacity .16s}
+body.grid-on .gridhint{opacity:1}
+
+@media (max-width:960px){
+  :root{--margin:20px;--rail:0px}
+  .app{grid-template-columns:1fr}
+  .rail{display:none}
+  .metric{grid-column:span 4}
+  .display{font-size:32px;line-height:40px}
+  .rule-row{grid-template-columns:1fr}
+  .drawer{left:0}
+}
+@media (max-width:720px){
+  .ws{display:none}
+  .conn span:last-child{display:none}
+  .wordmark em{display:none}
+  .masthead{gap:10px}
+  .switch .kicker{display:none}
+  .seg button{padding:6px 8px;font-size:10px}
+  .seg .glyph{margin-right:3px}
+  .sheet{padding:24px var(--margin) 120px}
+  .actions .btn{flex:1 1 auto;justify-content:center}
+  .tablewrap{max-height:calc(100vh - 380px)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="masthead">
+    <div class="wordmark">scrape<i>·</i>01 <em id="ver"></em></div>
+    <div class="ws mono" id="workspace"></div>
+    <div class="spacer"></div>
+    <div class="switch" title="default crawl profile for new actions">
+      <span class="kicker">profile</span>
+      <div class="seg" id="profileSeg">
+        <button data-v="polite" aria-pressed="true"><span class="glyph">🧹</span>polite</button>
+        <button data-v="monster" aria-pressed="false"><span class="glyph">🧟</span>monster</button>
+      </div>
+    </div>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connText">—</span></div>
+  </header>
+
+  <aside class="rail">
+    <div class="rail-head">
+      <span class="kicker">datasets</span>
+      <button class="btn quiet" id="btnNew">+ new</button>
+    </div>
+    <div class="dlist" id="dlist"></div>
+    <div class="rail-foot"><span id="jobstat">idle</span><span class="kicker" id="rowcount"></span></div>
+  </aside>
+
+  <main id="main">
+    <div class="guides" aria-hidden="true"><div class="cols"></div><div class="margins"></div></div>
+    <div class="gridhint">grid · 12 col · 8px baseline</div>
+    <div class="sheet" id="sheet"></div>
+  </main>
+</div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-bar" id="drawerBar">
+    <span class="title" id="drawerTitle">activity</span>
+    <span class="hint" id="drawerHint">click to expand</span>
+    <div class="spacer"></div>
+    <button class="btn" id="btnClearLog">clear</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<div class="modal" id="modal"><div class="sheetbox" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Migrate the pre-rename localStorage keys once, so a returning browser keeps
+// its profile choice and run options instead of silently reverting to polite.
+(function migrateKeys() {
+  for (const [oldK, newK] of [['pidu.profile', 'scrape01.profile'], ['pidu.runOpts', 'scrape01.runOpts']]) {
+    const v = localStorage.getItem(oldK);
+    if (v !== null && localStorage.getItem(newK) === null) localStorage.setItem(newK, v);
+    if (v !== null) localStorage.removeItem(oldK);
+  }
+})();
+
+const state = {
+  summary: null,
+  current: null,
+  rows: null,
+  q: '', sort: '', dir: 'asc', offset: 0, limit: 100,
+  tab: 'data',
+  jobs: [],
+  activeJob: null,
+  es: null,
+  logOpen: false,
+  profile: localStorage.getItem('scrape01.profile') === 'monster' ? 'monster' : 'polite',
+  sheetSig: null,   // signature of the last rendered sheet (skip pointless rebuilds)
+  viewSig: null,    // dataset|tab of the last render (decides whether to keep the page scroll)
+  tableKey: null,   // offset|limit|q of the last render (decides whether to keep the table scroll)
+};
+
+// ------------------------------------------------------------------ net
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: opts.body ? { 'content-type': 'application/json' } : undefined,
+    method: opts.method || (opts.body ? 'POST' : 'GET'),
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const ct = res.headers.get('content-type') || '';
+  const data = ct.includes('json') ? await res.json() : await res.text();
+  if (!res.ok) throw new Error((data && data.error) || res.statusText);
+  return data;
+}
+
+function toast(msg, kind = '') {
+  const el = document.createElement('div');
+  el.className = 't ' + kind;
+  el.textContent = msg;
+  $('#toast').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, kind === 'bad' ? 7000 : 3200);
+  setTimeout(() => el.remove(), kind === 'bad' ? 7400 : 3600);
+}
+
+const fmtBytes = (n) => {
+  if (!n) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB']; let i = 0, v = n;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return v.toFixed(i ? 1 : 0) + ' ' + u[i];
+};
+const fmtWhen = (iso) => {
+  if (!iso) return 'never';
+  const d = new Date(iso), now = Date.now(), s = (now - d.getTime()) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + 'm ago';
+  if (s < 86400) return Math.round(s / 3600) + 'h ago';
+  return d.toISOString().slice(0, 16).replace('T', ' ');
+};
+const num = (n) => Number(n || 0).toLocaleString('en-US');
+
+// ------------------------------------------------------------- profile
+function setProfile(p) {
+  state.profile = p === 'monster' ? 'monster' : 'polite';
+  localStorage.setItem('scrape01.profile', state.profile);
+  document.querySelectorAll('#profileSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.profile)));
+}
+$('#profileSeg').querySelectorAll('button').forEach((b) => b.onclick = () => {
+  setProfile(b.dataset.v);
+  toast('default profile: ' + state.profile, state.profile === 'monster' ? 'good' : '');
+});
+
+// ------------------------------------------------------------- refresh
+async function refresh() {
+  try {
+    const s = await api('/api/summary');
+    state.summary = s;
+    state.jobs = s.jobs || [];
+    $('#workspace').textContent = s.workspace || '';
+    $('#workspace').title = s.workspace || '';
+    $('#conn').className = 'conn ' + (s.active ? 'busy' : 'live');
+    $('#connText').textContent = s.active ? 'running' : 'live';
+    $('#jobstat').textContent = s.active ? s.active.label : (s.queueLength ? s.queueLength + ' queued' : 'idle');
+    renderList();
+    if (state.current && !busyTyping()) await openDataset(state.current, { keepTab: true });
+    else if (!state.current) renderMain();
+  } catch (err) {
+    $('#conn').className = 'conn';
+    $('#connText').textContent = 'offline';
+    $('#jobstat').textContent = 'disconnected';
+  }
+}
+
+function renderList() {
+  const ds = state.summary?.datasets || [];
+  const el = $('#dlist');
+  const keepRail = el.scrollTop;
+  $('#rowcount').textContent = ds.length ? ds.length + ' total' : '';
+  if (!ds.length) { el.innerHTML = '<div class="muted" style="padding:14px 32px">no datasets yet</div>'; return; }
+  el.innerHTML = ds.map((d) => {
+    const tag = d.drift.length
+      ? '<span class="tag drift">drift</span>'
+      : d.complete ? '<span class="tag ok">done</span>'
+      : d.rows ? '<span class="tag">partial</span>' : '';
+    return `<button class="ditem ${d.name === state.current ? 'sel' : ''}" data-name="${esc(d.name)}">
+      <span class="nm"><b>${esc(d.name)}</b>${tag}</span>
+      <span class="meta"><span class="n">${num(d.rows)}</span> rows · ${d.columns.length} cols · ${fmtWhen(d.lastRun)}</span>
+    </button>`;
+  }).join('');
+  el.querySelectorAll('.ditem').forEach((n) => n.onclick = () => { state.offset = 0; state.q = ''; state.sort = ''; openDataset(n.dataset.name); });
+  el.scrollTop = keepRail;   // rebuilding the rail must not throw away the reader's place
+}
+
+// ------------------------------------------------------------- dataset
+const busyTyping = () => {
+  const a = document.activeElement;
+  return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+};
+
+async function openDataset(name, { keepTab = false } = {}) {
+  state.current = name;
+  if (!keepTab) { state.tab = 'data'; state.offset = 0; }
+  await loadRows();   // rows first: renderMain reads state.rows synchronously
+  renderMain();
+  renderList();
+}
+
+async function loadRows() {
+  if (!state.current) return;
+  const p = new URLSearchParams({ offset: state.offset, limit: state.limit });
+  if (state.q) p.set('q', state.q);
+  if (state.sort) { p.set('sort', state.sort); p.set('dir', state.dir); }
+  try {
+    state.rows = await api(`/api/datasets/${state.current}/rows?` + p.toString());
+  } catch (err) {
+    state.rows = { header: [], rows: [], total: 0, filtered: 0, error: String(err.message) };
+  }
+}
+
+// A rebuild of the sheet destroys the scroll containers, so the reader's
+// place is thrown away. Two guards: (1) do not rebuild at all when nothing
+// changed, (2) when a rebuild is unavoidable, put the scroll back.
+function hashRows(r) {
+  if (!r || !Array.isArray(r.rows)) return '';
+  const s = (r.header || []).join('\u0001') + '\u0002' + r.rows.map((x) => x.join('\u0001')).join('\u0002');
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(36) + ':' + s.length;
+}
+
+function sheetSignature(d) {
+  return JSON.stringify([
+    d || null, state.tab, state.q, state.offset, state.limit, state.sort, state.dir,
+    state.jobs, hashRows(state.rows),
+  ]);
+}
+
+function renderMain() {
+  const sheet = $('#sheet');
+  const d = (state.summary?.datasets || []).find((x) => x.name === state.current);
+
+  const sig = sheetSignature(d);
+  if (sig === state.sheetSig) return;   // nothing changed — leave the DOM (and the scroll) alone
+  state.sheetSig = sig;
+
+  const mainEl = $('main');
+  const viewSig = `${state.current}|${state.tab}`;
+  const keepMain = viewSig === state.viewSig ? { top: mainEl.scrollTop, left: mainEl.scrollLeft } : null;
+  state.viewSig = viewSig;
+
+  // The table keeps its place when the ROWS ARE REORDERED (sort/dir) — the
+  // reader asked for a shuffle, not for a jump. It resets only when a
+  // DIFFERENT SET of rows is shown (paging, page size, filter).
+  const tableKey = `${state.offset}|${state.limit}|${state.q}`;
+  const prevWrap = sheet.querySelector('.tablewrap');
+  const keepWrap = (prevWrap && tableKey === state.tableKey) ? { top: prevWrap.scrollTop, left: prevWrap.scrollLeft } : null;
+  state.tableKey = tableKey;
+
+  const restoreMain = () => {
+    if (keepMain) { mainEl.scrollTop = keepMain.top; mainEl.scrollLeft = keepMain.left; }
+    else mainEl.scrollTop = 0;
+  };
+
+  if (!d) {
+    const any = (state.summary?.datasets || []).length > 0;
+    sheet.innerHTML = `<div class="empty">
+      <h3>${any ? 'Select a dataset' : 'No datasets yet'}</h3>
+      <p>${any ? 'Pick one in the left rail, or scrape a new URL.' : 'Scrape a URL and pi designs the extractor, verifies it on the live page, then crawls it into an ordered CSV.'}</p>
+      <p><button class="btn primary" onclick="openNewModal()">Scrape a new dataset</button></p>
+      <p class="muted">from a terminal: <code>scrape01 new name --url https://…</code></p>
+    </div>`;
+    restoreMain();
+    return;
+  }
+
+  const monster = d.profile === 'monster';
+  sheet.innerHTML = `
+    <div class="band">
+      <div style="grid-column:1 / span 7">
+        <h1 class="display" id="dtitle">${esc(d.name)}</h1>
+        <p class="lede">${esc(d.description || '')}</p>
+      </div>
+      <div style="grid-column:9 / span 2;justify-self:end;text-align:right">
+        <span class="kicker">profile</span>
+        <div style="font-family:var(--mono);font-size:13px;margin-top:2px;color:${monster ? 'var(--accent)' : 'var(--ink)'}">${monster ? '🧟 monster' : '🧹 polite'}</div>
+      </div>
+      <div style="grid-column:11 / span 2;justify-self:end;text-align:right">
+        <span class="kicker">row order</span>
+        <div style="font-family:var(--mono);font-size:13px;margin-top:2px">${d.sortBy ? esc(String(d.sortBy)) + (String(d.sortBy).includes(':desc') ? ' ↓' : ' ↑') : 'ingest'}</div>
+        <button class="btn quiet" id="btnOrder" style="margin-top:6px;padding:2px 8px;font-size:11px">change</button>
+      </div>
+    </div>
+
+    <div class="band metrics">
+      <div class="metric"><span class="kicker">rows</span><div class="v">${num(d.rows)}</div><div class="s">${d.headerHash ? 'header ' + esc(d.headerHash.slice(0, 8)) : 'no csv yet'}</div></div>
+      <div class="metric"><span class="kicker">columns</span><div class="v">${d.columns.length}</div><div class="s">${esc(d.columns.slice(0, 3).join(', '))}${d.columns.length > 3 ? '…' : ''}</div></div>
+      <div class="metric"><span class="kicker">sources</span><div class="v">${d.sources.length}</div><div class="s">${d.sources.filter((s) => s.done).length} complete</div></div>
+      <div class="metric"><span class="kicker">size</span><div class="v">${fmtBytes(d.bytes).split(' ')[0]}<small>${fmtBytes(d.bytes).split(' ')[1]}</small></div><div class="s">csv</div></div>
+      <div class="metric"><span class="kicker">last run</span><div class="v" style="font-size:20px;line-height:40px">${fmtWhen(d.lastRun)}</div><div class="s">${d.runs || 0} runs</div></div>
+      <div class="metric"><span class="kicker">state</span><div class="v" style="font-size:20px;line-height:40px;color:${d.drift.length ? 'var(--bad)' : 'var(--ok)'}">${d.drift.length ? 'drift' : d.complete ? 'complete' : 'partial'}</div><div class="s">${d.drift.length ? esc(d.drift.join(', ')) : 'checkpointed'}</div></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnRun">▸ Run</button>
+      <button class="btn quiet" id="btnRunOpts">Run with options…</button>
+      <button class="btn quiet" id="btnRebuild">Rebuild CSV</button>
+      <button class="btn quiet" id="btnVerify">Verify</button>
+      <a class="btn quiet" href="/api/datasets/${encodeURIComponent(d.name)}/download">↓ Download</a>
+      <div class="spacer"></div>
+      ${d.drift.map((s) => `<button class="btn accent" data-repair="${esc(s)}">Repair ${esc(s)}</button>`).join('')}
+      <button class="btn danger" id="btnDelete" title="delete this dataset and everything it produced">✕ Delete</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab ${state.tab === 'data' ? 'on' : ''}" data-tab="data">Data <span class="n">${num(d.rows)}</span></div>
+      <div class="tab ${state.tab === 'sources' ? 'on' : ''}" data-tab="sources">Sources <span class="n">${d.sources.length}</span></div>
+      <div class="tab ${state.tab === 'activity' ? 'on' : ''}" data-tab="activity">Activity <span class="n">${state.jobs.length}</span></div>
+    </div>
+    <div id="tabbody"></div>`;
+
+  sheet.querySelectorAll('[data-tab]').forEach((t) => t.onclick = () => { state.tab = t.dataset.tab; renderMain(); });
+  $('#btnRun').onclick = () => startRun(d.name, {});
+  $('#btnRunOpts').onclick = () => openRunModal(d);
+  $('#btnRebuild').onclick = () => startAction(d.name, 'rebuild', 'rebuild ' + d.name, {});
+  $('#btnVerify').onclick = async () => {
+    try {
+      const v = await api(`/api/datasets/${d.name}/verify`, { method: 'POST' });
+      toast(v.ok ? `Verified: ${num(v.rows)} rows, header locked (${v.headerHash})` : 'Verify failed: ' + (v.problems.join('; ') || 'unknown'), v.ok ? 'good' : 'bad');
+    } catch (err) { toast(String(err.message), 'bad'); }
+  };
+  sheet.querySelectorAll('[data-repair]').forEach((b) => b.onclick = () => startAction(d.name, 'repair', `repair ${d.name}/${b.dataset.repair}`, { source: b.dataset.repair }));
+  $('#btnDelete').onclick = () => openDeleteModal(d);
+  $('#btnOrder').onclick = () => openOrderModal(d);
+
+  const body = $('#tabbody');
+  if (state.tab === 'data') renderDataTab(body, d, { keepScroll: keepWrap });
+  else if (state.tab === 'sources') renderSourcesTab(body, d);
+  else renderActivityTab(body);
+  alignInk();
+  restoreMain();
+}
+
+function renderDataTab(el, d, { keepScroll } = {}) {
+  const r = state.rows || { header: [], rows: [], total: 0, filtered: 0 };
+  if (!d.rows) {
+    el.innerHTML = `<div class="empty"><h3>No rows yet</h3>
+      <p>The crawl hasn't produced a CSV yet. Press <b>Run</b> to fetch it.</p>
+      ${d.drift.length ? '<p class="muted">Sources are drifting — repair them first.</p>' : ''}</div>`;
+    return;
+  }
+  const sortArrow = (c) => state.sort === c ? `<span class="arrow">${state.dir === 'desc' ? '▼' : '▲'}</span>` : '';
+  const isNum = (v) => v !== '' && v !== null && v !== undefined && Number.isFinite(Number(v));
+
+  el.innerHTML = `
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="filter rows…  ( / )" value="${esc(state.q)}" />
+      <select id="limit">
+        ${[50, 100, 250, 500].map((n) => `<option value="${n}" ${state.limit === n ? 'selected' : ''}>${n} / page</option>`).join('')}
+      </select>
+      <span class="muted" id="count"></span>
+      <div class="spacer"></div>
+      <span class="muted">click a column to sort · click a cell to copy</span>
+    </div>
+    <div class="tablewrap">
+      <div class="dtable" style="grid-template-columns:repeat(${Math.max(0, r.header.length - 1)},max-content) minmax(max-content,1fr)">
+        ${r.header.map((h) => `<div class="dcell head" data-col="${esc(h)}">${esc(h)}${sortArrow(h)}</div>`).join('')}
+        ${r.rows.map((row) => row.map((v) => `<div class="dcell ${isNum(v) ? 'num' : (!v ? 'blank' : '')}" title="${esc(v)}" data-v="${esc(v)}">${esc(v)}</div>`).join('')).join('')}
+      </div>
+    </div>
+    <div class="pager">
+      <button class="btn quiet" id="prev" ${state.offset === 0 ? 'disabled' : ''}>← prev</button>
+      <button class="btn quiet" id="next" ${state.offset + state.limit >= (r.filtered || 0) ? 'disabled' : ''}>next →</button>
+      <span class="range" id="range"></span>
+    </div>`;
+
+  const setCount = () => {
+    const from = (r.filtered || 0) === 0 ? 0 : state.offset + 1;
+    const to = Math.min(state.offset + state.limit, r.filtered || 0);
+    $('#range').textContent = `${num(from)}–${num(to)} of ${num(r.filtered || 0)}${state.q ? ` (filtered from ${num(r.total)})` : ''}`;
+    $('#count').textContent = state.q ? `${num(r.filtered)} matches` : '';
+  };
+  setCount();
+
+  el.querySelectorAll('.dcell.head').forEach((th) => th.onclick = async () => {
+    const c = th.dataset.col;
+    state.dir = state.sort === c && state.dir === 'asc' ? 'desc' : 'asc';
+    state.sort = c;
+    await loadRows(); renderMain();
+  });
+  el.querySelectorAll('.dcell[data-v]').forEach((td) => td.onclick = () => {
+    const v = td.dataset.v || '';
+    navigator.clipboard?.writeText(v).then(() => { td.classList.add('flash'); setTimeout(() => td.classList.remove('flash'), 320); }).catch(() => {});
+  });
+  const q = $('#q');
+  let t;
+  q.oninput = () => { clearTimeout(t); t = setTimeout(async () => { state.q = q.value; state.offset = 0; await loadRows(); const v = q.value; renderMain(); const nq = $('#q'); nq.value = v; nq.focus(); nq.setSelectionRange(v.length, v.length); }, 220); };
+  $('#limit').onchange = async (e) => { state.limit = Number(e.target.value); state.offset = 0; await loadRows(); renderMain(); };
+  $('#prev').onclick = async () => { state.offset = Math.max(0, state.offset - state.limit); await loadRows(); renderMain(); };
+  $('#next').onclick = async () => { state.offset += state.limit; await loadRows(); renderMain(); };
+
+  if (keepScroll) {                       // same page, same rows — keep the reader's place in the table
+    const w = el.querySelector('.tablewrap');
+    if (w) { w.scrollTop = keepScroll.top; w.scrollLeft = keepScroll.left; }
+  }
+}
+
+function renderSourcesTab(el, d) {
+  el.innerHTML = `<div class="ruled" style="margin-top:24px">${d.sources.map((s) => `
+    <div class="rule-row">
+      <div>
+        <div class="id">${esc(s.id)}</div>
+        <div class="u">${esc(s.url)}</div>
+      </div>
+      <div class="u">${esc(s.kind)} · page ${s.page} · ${num(s.rows)} rows · last ${fmtWhen(s.lastRun)}</div>
+      <div class="r">
+        ${s.drift ? '<span class="tag drift">drift</span>' : s.done ? '<span class="tag ok">complete</span>' : `<span class="tag">page ${s.page}</span>`}
+        <button class="btn quiet" data-rep="${esc(s.id)}">Repair with pi</button>
+      </div>
+      ${s.stoppedEarly ? `<div class="err">stopped early at page ${esc(String(s.stoppedEarly.page ?? '?'))} — ${esc(String(s.stoppedEarly.reason || 'the crawl did not reach the end of the listing'))}. This dataset is INCOMPLETE.</div>` : ''}
+      ${s.error ? `<div class="err">${esc(s.error)}</div>` : ''}
+    </div>`).join('')}</div>`;
+  el.querySelectorAll('[data-rep]').forEach((b) => b.onclick = () => startAction(d.name, 'repair', `repair ${d.name}/${b.dataset.rep}`, { source: b.dataset.rep }));
+}
+
+function renderActivityTab(el) {
+  el.innerHTML = `<div class="ruled joblist" style="margin-top:24px">${state.jobs.length ? state.jobs.map((j) => `
+    <div class="rule-row" data-job="${esc(j.id)}">
+      <div>
+        <div class="id">${esc(j.label)}</div>
+        <div class="u">${esc(j.id)}</div>
+      </div>
+      <div class="u">${fmtWhen(j.createdAt)}${j.result && j.result.newRows !== undefined ? ` · +${num(j.result.newRows)} rows · ${num(j.result.pages)} pages` : ''}${j.error ? ' · ' + esc(j.error.slice(0, 120)) : ''}</div>
+      <div class="r"><span class="status ${esc(j.status)}">${esc(j.status)}</span></div>
+    </div>`).join('') : '<div class="muted" style="padding:14px 0">no jobs yet</div>'}
+  </div>`;
+  el.querySelectorAll('[data-job]').forEach((n) => n.onclick = () => { streamJob(n.dataset.job); openDrawer(true); });
+}
+
+// -------------------------------------------------------------- actions
+async function startRun(name, params) {
+  try {
+    const res = await api(`/api/datasets/${name}/run`, { body: params });
+    toast('run queued: ' + res.job.id, 'good');
+    streamJob(res.job.id); openDrawer(true);
+    setTimeout(refresh, 400);
+  } catch (err) { toast(String(err.message), 'bad'); }
+}
+
+async function startAction(name, action, label, params) {
+  try {
+    const res = await api(`/api/datasets/${name}/${action}`, { body: params });
+    toast(label + ' queued', 'good');
+    streamJob(res.job.id); openDrawer(true);
+    setTimeout(refresh, 400);
+  } catch (err) { toast(String(err.message), 'bad'); }
+}
+
+// ---------------------------------------------------------------- jobs
+function streamJob(id) {
+  if (state.es) { state.es.close(); state.es = null; }
+  state.activeJob = id;
+  $('#drawerTitle').textContent = 'job ' + id;
+  $('#drawerBody').innerHTML = '';
+  const es = new EventSource(`/api/jobs/${id}/stream`);
+  state.es = es;
+  es.addEventListener('snapshot', (e) => {
+    const j = JSON.parse(e.data);
+    (j.lines || []).forEach(addLine);
+    $('#drawerTitle').textContent = `job ${j.id} — ${j.label} [${j.status}]`;
+  });
+  es.addEventListener('line', (e) => addLine(JSON.parse(e.data)));
+  es.addEventListener('status', (e) => {
+    const j = JSON.parse(e.data);
+    $('#drawerTitle').textContent = `job ${j.id} — ${j.label} [${j.status}]`;
+    if (['ok', 'failed', 'cancelled', 'locked'].includes(j.status)) {
+      addLine({ time: new Date().toISOString(), level: j.status === 'ok' ? 'info' : 'error', msg: `job ${j.status}${j.error ? ': ' + j.error : ''}` });
+      es.close(); state.es = null; state.activeJob = null;
+      refresh();
+    }
+  });
+  es.onerror = () => { /* EventSource retries on its own */ };
+}
+
+function addLine(rec) {
+  const body = $('#drawerBody');
+  const near = body.scrollTop + body.clientHeight > body.scrollHeight - 60;
+  const line = document.createElement('div');
+  line.className = 'ln ' + (rec.level || 'info');
+  line.textContent = (rec.time || '').slice(11, 19) + '  ' + (rec.msg || JSON.stringify(rec));
+  body.appendChild(line);
+  if (near) body.scrollTop = body.scrollHeight;
+}
+
+function openDrawer(open) {
+  state.logOpen = open;
+  $('#drawer').classList.toggle('open', open);
+  $('#drawerHint').textContent = open ? 'click to collapse' : 'click to expand';
+}
+
+// --------------------------------------------------------------- modals
+function closeModal() { $('#modal').classList.remove('on'); $('#modalBox').innerHTML = ''; }
+function showModal(html) { $('#modalBox').innerHTML = html; $('#modal').classList.add('on'); }
+
+window.openNewModal = function openNewModal() {
+  const monster = state.profile === 'monster';
+  showModal(`
+    <h2>Scrape a new dataset</h2>
+    <p class="hint">pi reads the page, designs an extractor, verifies it against the live page, saves the config, then crawls it. Nothing is written if the extractor matches nothing.</p>
+    <div class="field"><label>URL</label><input type="url" id="fUrl" placeholder="https://example.com/products?page=1" /></div>
+    <div class="field"><label>What do you want?</label><input type="text" id="fGoal" placeholder="product name, price, stock status, product link" /><div class="sub">plain language — maps to CSV columns</div></div>
+    <div class="row2">
+      <div class="field"><label>Dataset name</label><input type="text" id="fName" placeholder="auto from url" /></div>
+      <div class="field"><label>Max pages</label><input type="number" id="fPages" value="5" min="1" max="500" /></div>
+    </div>
+    <div class="field"><label>Model (optional)</label><input type="text" id="fModel" placeholder="leave blank for pi's default" /></div>
+    <div class="switchrow ${monster ? 'on' : ''}" id="fMonsterRow">
+      <input type="checkbox" id="fMonster" ${monster ? 'checked' : ''} style="width:17px;height:17px;accent-color:var(--accent);margin-top:2px" />
+      <div class="body">
+        <strong>Monster mode</strong>
+        <span>Renders JavaScript in a local browser, ignores robots.txt, 150 ms between requests, 6 retries, a bigger budget. Still sequential, never faster than 100 ms — and every overridden robots rule is logged.</span>
+      </div>
+    </div>
+    <div class="checkline"><input type="checkbox" id="fRespect" />Respect robots.txt even in monster mode (keep the rendering, drop the override)</div>
+    <div class="foot">
+      <button class="btn quiet" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="fGo">Scrape it</button>
+    </div>`);
+  $('#fUrl').focus();
+  $('#fMonster').onchange = (e) => $('#fMonsterRow').classList.toggle('on', e.target.checked);
+  $('#fGo').onclick = async () => {
+    const url = $('#fUrl').value.trim();
+    if (!/^https?:\/\//i.test(url)) return toast('need an absolute http(s) URL', 'bad');
+    const body = { url, goal: $('#fGoal').value.trim(), maxPages: Number($('#fPages').value) || 5, monster: $('#fMonster').checked, respectRobots: $('#fRespect').checked };
+    const nm = $('#fName').value.trim(); if (nm) body.name = nm;
+    const md = $('#fModel').value.trim(); if (md) body.model = md;
+    $('#fGo').disabled = true;
+    try {
+      const res = await api('/api/datasets', { body });
+      closeModal();
+      toast(body.monster ? 'monster scrape queued: ' + body.url : 'scraping: ' + body.url, 'good');
+      streamJob(res.job.id); openDrawer(true);
+      setTimeout(refresh, 500);
+    } catch (err) { toast(String(err.message), 'bad'); $('#fGo').disabled = false; }
+  };
+};
+
+// Deleting is irreversible: the first click opens a confirmation that names
+// the exact target, the effect and the recovery boundary.
+function openDeleteModal(d) {
+  showModal(`
+    <h2>Delete ${esc(d.name)}?</h2>
+    <p class="hint">This removes the dataset and everything it produced. There is no undo — the rows are gone, and re-running the crawl would fetch them again from scratch.</p>
+    <div class="ruled" style="border-top:1px solid var(--rule)">
+      <div class="rule-row" style="grid-template-columns:150px 1fr">
+        <div class="id">config</div><div class="u">datasets/${esc(d.name)}.json</div>
+      </div>
+      <div class="rule-row" style="grid-template-columns:150px 1fr">
+        <div class="id">data</div><div class="u">data/${esc(d.name)}/ — CSV, raw ingest log, checkpoints, rejects</div>
+      </div>
+      <div class="rule-row" style="grid-template-columns:150px 1fr">
+        <div class="id">rows lost</div><div class="u">${num(d.rows)}</div>
+      </div>
+    </div>
+    <div class="foot">
+      <button class="btn quiet" onclick="closeModal()">Keep it</button>
+      <button class="btn danger" id="dGo">Delete ${esc(d.name)} permanently</button>
+    </div>`);
+  $('#dGo').onclick = async () => {
+    $('#dGo').disabled = true;
+    try {
+      const res = await api(`/api/datasets/${encodeURIComponent(d.name)}/delete`, { method: 'POST' });
+      closeModal();
+      state.current = null;
+      toast(`deleted ${d.name} — ${(res.removed || []).length} item(s) removed`, 'good');
+      await refresh();
+    } catch (err) { toast(String(err.message), 'bad'); $('#dGo').disabled = false; }
+  };
+}
+
+// Row order: the page's order by default, or a declared sort. Changing it
+// rewrites the config and rebuilds the CSV from the raw log.
+function openOrderModal(d) {
+  const cols = d.columns || [];
+  // sortBy is "col" or "col:dir" — parse it, or the sheet lies about the
+  // current order and the first click silently resets it
+  const cur = String(d.sortBy || '');
+  const curCol = cur ? cur.split(':')[0] : '';
+  const curDir = /desc/.test(cur) ? 'desc' : 'asc';
+  const current = curCol ? `${curCol} ${curDir === 'desc' ? 'descending (newest first)' : 'ascending (oldest first)'}` : 'ingest order (the page\u2019s order)';
+  showModal(`
+    <h2>Row order — ${esc(d.name)}</h2>
+    <p class="hint">The CSV keeps <em>ingest order</em> by default: the order the page handed the rows over, so a page that lists newest first gives you a newest-first CSV. Declare an order to change that — the raw log is untouched, only the projection is re-sorted.</p>
+    <div class="field"><label>Currently</label>
+      <div class="mono" style="font-size:13px;padding:6px 0">${esc(current)}</div>
+    </div>
+    <div class="field"><label>Order by</label>
+      <select id="oCol">
+        <option value="">ingest order (the page's order)</option>
+        ${cols.map((c) => {
+          const t = (d.timeColumns || []).find((x) => x.column === c);
+          return `<option value="${esc(c)}" ${curCol === c ? 'selected' : ''}>${esc(c)}${t ? ` — time axis (${esc(t.kind)})` : ''}</option>`;
+        }).join('')}
+      </select>
+      ${(d.timeColumns || []).length ? `<div class="sub">${d.timeColumns.map((t) => `${esc(t.column)}: ${esc(t.kind)}`).join(' · ')} — detected from the values, not the type</div>` : ''}
+    </div>
+    <div class="field"><label>Direction</label>
+      <select id="oDir" ${curCol ? '' : 'disabled'}>
+        <option value="asc" ${curDir === 'asc' ? 'selected' : ''}>ascending (oldest first)</option>
+        <option value="desc" ${curDir === 'desc' ? 'selected' : ''}>descending (newest first)</option>
+      </select>
+      <div class="sub" id="oHint">${curCol ? '' : 'pick a column to order by — the direction only matters once you do'}</div>
+    </div>
+    <div class="foot">
+      <button class="btn quiet" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="oGo">Apply</button>
+    </div>`);
+
+  const colSel = $('#oCol');
+  const dirSel = $('#oDir');
+  const specNow = () => (colSel.value ? `${colSel.value}:${dirSel.value}` : null);
+  const sync = () => {
+    const on = !!colSel.value;
+    dirSel.disabled = !on;
+    $('#oHint').textContent = on ? '' : "pick a column to order by — the direction only matters once you do";
+    const now = specNow();
+    const same = (now === null && !cur) || (now !== null && now === cur);
+    $('#oGo').disabled = same;
+    $('#oGo').textContent = same ? 'No change' : 'Apply';
+  };
+  colSel.onchange = sync;
+  dirSel.onchange = sync;
+  sync();
+
+  $('#oGo').onclick = async () => {
+    const spec = specNow();
+    $('#oGo').disabled = true;
+    try {
+      const res = await api(`/api/datasets/${encodeURIComponent(d.name)}/order`, { method: 'POST', body: { sortBy: spec } });
+      closeModal();
+      toast(spec ? `row order: ${spec.replace(':asc', ' ascending').replace(':desc', ' descending')}` : 'row order: ingest order', 'good');
+      streamJob(res.job.id); openDrawer(true);
+      setTimeout(refresh, 400);
+    } catch (err) { toast(String(err.message), 'bad'); $('#oGo').disabled = false; }
+  };
+}
+
+function openRunModal(d) {
+  const last = JSON.parse(localStorage.getItem('scrape01.runOpts') || '{}');
+  const monster = d.profile === 'monster' || (last.monster !== undefined ? last.monster : state.profile === 'monster');
+  showModal(`
+    <h2>Run ${esc(d.name)}</h2>
+    <p class="hint">Resumes from each source's checkpoint. Completed sources are skipped unless you force a re-crawl (dedupe keeps the CSV clean either way).</p>
+    <div class="row2">
+      <div class="field"><label>Max pages this run</label><input type="number" id="rPages" min="1" max="500" value="${last.maxPages || 10}" /></div>
+      <div class="field"><label>Delay per request (ms)</label><input type="number" id="rDelay" min="0" max="60000" value="${last.delayMs ?? 1000}" /></div>
+    </div>
+    <div class="switchrow ${monster ? 'on' : ''}" id="rMonsterRow">
+      <input type="checkbox" id="rMonster" ${monster ? 'checked' : ''} style="width:17px;height:17px;accent-color:var(--accent);margin-top:2px" />
+      <div class="body">
+        <strong>Monster mode</strong>
+        <span>Render JavaScript, ignore robots.txt, faster requests. The dataset keeps its own profile (${esc(d.profile || 'polite')}) unless you override it here.</span>
+      </div>
+    </div>
+    <label class="checkline"><input type="checkbox" id="rRespect" ${last.respectRobots ? 'checked' : ''} />Respect robots.txt even in monster mode</label>
+    <label class="checkline"><input type="checkbox" id="rForce" ${last.force ? 'checked' : ''} />Force re-crawl of completed sources</label>
+    <label class="checkline"><input type="checkbox" id="rDry" />Dry run (no writes)</label>
+    <div class="foot">
+      <button class="btn quiet" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="rGo">Run</button>
+    </div>`);
+  $('#rMonster').onchange = (e) => $('#rMonsterRow').classList.toggle('on', e.target.checked);
+  $('#rGo').onclick = () => {
+    const opts = { maxPages: Number($('#rPages').value) || 10, delayMs: Number($('#rDelay').value), force: $('#rForce').checked, dryRun: $('#rDry').checked, monster: $('#rMonster').checked, respectRobots: $('#rRespect').checked };
+    localStorage.setItem('scrape01.runOpts', JSON.stringify({ maxPages: opts.maxPages, delayMs: opts.delayMs, force: opts.force, monster: opts.monster, respectRobots: opts.respectRobots }));
+    closeModal();
+    startRun(d.name, opts);
+  };
+}
+window.closeModal = closeModal;
+
+// ----------------------------------------------------- grid + ink optics
+function buildGuides() {
+  const cols = $('.guides .cols');
+  if (cols && !cols.children.length) {
+    const n = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cols')) || 12;
+    cols.innerHTML = Array.from({ length: n }, () => '<i></i>').join('');
+  }
+}
+
+// Box-on-grid is not ink-on-grid: shift display type by its side bearing.
+function alignInk() {
+  const cvs = document.createElement('canvas');
+  const ctx = cvs.getContext('2d');
+  document.querySelectorAll('.display, .metric .v').forEach((el) => {
+    el.style.marginLeft = '0px';
+    const cs = getComputedStyle(el);
+    const ch = (el.textContent || '').trim()[0];
+    if (!ch) return;
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    ctx.textAlign = 'left';
+    const abl = ctx.measureText(ch).actualBoundingBoxLeft;
+    if (isFinite(abl)) el.style.marginLeft = abl.toFixed(2) + 'px';
+  });
+}
+
+function toggleGrid() {
+  document.body.classList.toggle('grid-on');
+  buildGuides();
+}
+
+// ---------------------------------------------------------------- wiring
+$('#btnNew').onclick = () => openNewModal();
+$('#drawerBar').onclick = () => openDrawer(!state.logOpen);
+$('#btnClearLog').onclick = (e) => { e.stopPropagation(); $('#drawerBody').innerHTML = ''; };
+$('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'g' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) toggleGrid();
+  if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); $('#q')?.focus(); }
+});
+window.addEventListener('resize', () => { buildGuides(); alignInk(); });
+if (document.fonts?.ready) document.fonts.ready.then(alignInk);
+
+setProfile(state.profile);
+buildGuides();
+refresh();
+setInterval(() => { if (!state.activeJob && !busyTyping()) refresh(); }, 6000);
+</script>
+</body>
+</html>

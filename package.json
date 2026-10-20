@@ -1,0 +1,23 @@
+{
+  "name": "scrape-01",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Durable, restartable pi-powered scraper that produces ordered CSV datasets",
+  "type": "module",
+  "bin": {
+    "scrape01": "./bin/scrape01.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "doctor": "node bin/scrape01.mjs doctor",
+    "status": "node bin/scrape01.mjs status",
+    "run": "node bin/scrape01.mjs run --all",
+    "loop": "node bin/scrape01.mjs loop --all --interval 6h --auto-repair",
+    "ui": "node bin/scrape01.mjs serve --open"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}

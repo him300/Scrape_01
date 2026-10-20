@@ -1,0 +1,70 @@
+{
+  "name": "math",
+  "description": "Math3ma blog posts covering quantum physics, category theory, mathematics, and related mathematical topics.",
+  "columns": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "url",
+      "type": "url",
+      "required": false
+    },
+    {
+      "name": "published_date",
+      "type": "date",
+      "required": false
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "excerpt",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "key": [
+    "title"
+  ],
+  "sortBy": null,
+  "sources": [
+    {
+      "id": "main",
+      "url": "https://www.math3ma.com/",
+      "extract": {
+        "kind": "selector",
+        "row": "div.collection-item-3",
+        "fields": {
+          "title": "a.link-block h1.heading-3",
+          "url": "a.link-block[href]@href",
+          "published_date": ".div-for-meta .meta-data-font",
+          "category": ".div-for-meta .text-block-12",
+          "excerpt": ".div-block-for-blog-items .w-richtext"
+        },
+        "pagination": {
+          "mode": "next",
+          "selector": "a:contains(\"Next\")"
+        }
+      },
+      "paginate": {
+        "mode": "next",
+        "selector": "a:contains(\"Next\")"
+      }
+    }
+  ],
+  "csv": {
+    "delimiter": ",",
+    "newline": "\r\n",
+    "bom": false
+  },
+  "limits": {
+    "maxPages": 200,
+    "maxRows": 200000,
+    "maxDepth": 1
+  }
+}

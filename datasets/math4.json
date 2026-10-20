@@ -1,0 +1,70 @@
+{
+  "name": "math4",
+  "description": "Math3ma blog posts and their mentioned topics.",
+  "columns": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "publication_date",
+      "type": "date",
+      "required": false
+    },
+    {
+      "name": "topic",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "summary",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "url",
+      "type": "url",
+      "required": false
+    }
+  ],
+  "key": [
+    "url"
+  ],
+  "sortBy": "publication_date:asc",
+  "sources": [
+    {
+      "id": "main",
+      "url": "https://www.math3ma.com/",
+      "extract": {
+        "kind": "selector",
+        "row": "div.collection-item-3",
+        "fields": {
+          "title": "h1.heading-3",
+          "publication_date": ".meta-data-font",
+          "topic": ".text-block-12",
+          "summary": ".text-block-31",
+          "url": "a.read-more-link@href"
+        }
+      },
+      "paginate": {
+        "mode": "next",
+        "selector": "a:contains(\"Next\")"
+      }
+    }
+  ],
+  "csv": {
+    "delimiter": ",",
+    "newline": "\r\n",
+    "bom": false
+  },
+  "limits": {
+    "maxPages": 200,
+    "maxRows": 200000,
+    "maxDepth": 1
+  },
+  "timeKinds": {
+    "publication_date": "parsed"
+  },
+  "profile": "monster"
+}

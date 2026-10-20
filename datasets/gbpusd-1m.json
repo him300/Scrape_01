@@ -1,0 +1,95 @@
+{
+  "name": "gbpusd-1m",
+  "description": "One-minute GBP/USD OHLCV bars from the Yahoo Finance chart API, using the maximum 7-day window available for 1m data, with ISO datetimes.",
+  "columns": [
+    {
+      "name": "datetime",
+      "type": "datetime",
+      "required": false
+    },
+    {
+      "name": "open",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "high",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "low",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "close",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "volume",
+      "type": "integer",
+      "required": false
+    }
+  ],
+  "key": [
+    "datetime"
+  ],
+  "sortBy": "datetime:asc",
+  "sources": [
+    {
+      "id": "main",
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/GBPUSD%3DX?interval=1m&range=7d",
+      "extract": {
+        "kind": "json",
+        "sourceUrl": "https://query1.finance.yahoo.com/v8/finance/chart/GBPUSD%3DX?interval=1m&range=1mo",
+        "path": "chart.result[0].timestamp",
+        "fields": {
+          "datetime": {
+            "json": "chart.result[0].timestamp",
+            "indexed": true,
+            "as": "iso"
+          },
+          "open": {
+            "json": "chart.result[0].indicators.quote[0].open",
+            "indexed": true
+          },
+          "high": {
+            "json": "chart.result[0].indicators.quote[0].high",
+            "indexed": true
+          },
+          "low": {
+            "json": "chart.result[0].indicators.quote[0].low",
+            "indexed": true
+          },
+          "close": {
+            "json": "chart.result[0].indicators.quote[0].close",
+            "indexed": true
+          },
+          "volume": {
+            "json": "chart.result[0].indicators.quote[0].volume",
+            "indexed": true
+          }
+        }
+      }
+    }
+  ],
+  "csv": {
+    "delimiter": ",",
+    "newline": "\r\n",
+    "bom": false
+  },
+  "limits": {
+    "maxPages": 200,
+    "maxRows": 200000,
+    "maxDepth": 1
+  },
+  "profile": "monster",
+  "dropAllZero": [
+    "open",
+    "high",
+    "low",
+    "close"
+  ]
+}
