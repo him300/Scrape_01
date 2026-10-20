@@ -1,6 +1,6 @@
 # Scrape_01
 
-A durable, self-healing scraper that turns the web into **ordered CSV datasets**.
+Scrape_01 is a durable, self-healing web scraper that turns the web into ordered CSV datasets. A deterministic engine handles fetch → extract → coerce → append → CSV, while a `pi` agent designs and repairs extractors — but nothing is written until every proposal is verified against the live page. Choose between `polite` (robots.txt, 1s delay) and `monster` (JavaScript rendering, 150ms jittered delay) crawl profiles. Access it via CLI, a local web dashboard, or Telegram.
 
 Two halves, deliberately separated:
 
